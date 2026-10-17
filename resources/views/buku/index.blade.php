@@ -8,6 +8,12 @@
 </head>
 <body class="bg-light">
     <div class="container my-5">
+    <div class="mb-4 btn-group">
+    <a href="/buku" class="btn btn-primary fw-bold">Katalog Buku</a>
+    <a href="/kategori" class="btn btn-outline-primary">Kategori</a>
+    <a href="/peminjamans" class="btn btn-outline-primary">Peminjaman</a>
+    <a href="/laporan" class="btn btn-outline-primary">Laporan</a>
+</div>
         <div class="row">
             <div class="col-md-12">
                 <div class="card shadow-sm">

@@ -1,29 +1,68 @@
-# Tugas Mandiri Praktikum PPW Week 5 - Pembangunan Sistem Informasi Perpustakaan Kampus Del (SIPUS-Del)
+# Tugas Mandiri Praktikum PPW Week 6 - Pembangunan Sistem Informasi Perpustakaan Kampus Del (SIPUS-Del)
 
-Repositori ini berisi pengerjaan Tugas Mandiri Praktikum **Pemrograman dan Pengujian Aplikasi Web (PPW)** Minggu 05, Program Studi S1 Sistem Informasi - Institut Teknologi Del.
+Repositori ini berisi pengerjaan Tugas Mandiri Praktikum **Pemrograman dan Pengujian Aplikasi Web (PPW)** Minggu 06, Program Studi S1 Sistem Informasi - Institut Teknologi Del.
 
 ## 👤 Identitas Mahasiswa
 - **Nama:** Amelia Renata Lumbanbatu
+- **NIM:** 12S24031
 - **Program Studi:** S1 Sistem Informasi (2024)
 - **Institusi:** Institut Teknologi Del
 - **LinkedIn:** [Amelia Renata Lumbanbatu](https://www.linkedin.com/in/amelia-renata-lumbanbatu-867936364)
 
 ---
 
-## 🛠️ Implementasi Spesifikasi Modul
-1. **Skema Data & Migrations:** Membuat tabel `kategoris` dan `bukus` yang saling berelasi menggunakan *foreign key*, mengatur tipe data yang presisi, serta menyiapkan index database.
-2. **Model Eloquent & Relasi:** Menerapkan relasi *One-to-Many* (`hasMany` dan `belongsTo`), mengatur proteksi *mass assignment* (`$fillable`), serta mengoptimalkan kueri dengan *Eager Loading* (`Buku::with('kategori')`) guna mencegah *N+1 query problem*.
-3. **Routing RESTful & Resource Controller:** Mendaftarkan `Route::resource` yang mencakup 7 *method* CRUD lengkap secara konsisten dan menerapkan *Implicit Route Model Binding* pada controller.
-4. **Validasi Form Server-Side & CSRF:** Menjalankan validasi form sisi server yang ketat (seperti ISBN unik, panjang judul minimal 5 karakter, stok tidak boleh minus) melalui `$request->validate()` dan memproteksi semua form dengan `@csrf` dan *method spoofing*.
-5. **Blade Templating & Desain UI:** Mengimplementasikan *master layout* berbasis komponen `<x-layout>`, menyajikan daftar buku dengan *pagination*, menampilkan pesan sukses via *flash session*, serta menangani kondisi data kosong dengan direktif `@forelse`.
-6. **Seeders & Factory:** Menyediakan file *seeder* yang diotomatisasi untuk memasukkan *mock data* realistis, yang terdiri dari 5 kategori perpustakaan dan 20 buku dummy untuk keperluan pengujian.
+## 🔐 Kredensial Uji Pustakawan
+- **Email:** `pustakawan@del.ac.id`
+- **Password:** `password123`
 
 ---
 
-## 🌐 Akses Halaman Web (Routes)
-Setelah server lokal dijalankan dengan perintah `php artisan serve`, aplikasi dapat langsung diuji melalui peramban (*browser*) pada rute berikut:
+## 🛠️ Implementasi Spesifikasi Modul 6
+1. **Skema Tabel Transaksi & Relasi Eloquent:**
+   - Membuat migrasi tabel `peminjamans` dengan *foreign key* `buku_id` (`cascadeOnDelete`), kode pinjam unik, status peminjaman, serta pencatatan timestamp.
+   - Definisi relasi *One-to-Many* (`hasMany` pada Model Buku dan `belongsTo` pada Model Peminjaman).
 
-- **Halaman Daftar Kategori:** [http://127.0.0.1:8000/kategori](http://127.0.0.1:8000/kategori)
-- **Halaman Daftar Buku:** [http://127.0.0.1:8000/buku](http://127.0.0.1:8000/buku)
+2. **Transaksi Basis Data ACID & Concurrency Locking:**
+   - Pembungkusan transaksi peminjaman dan pengembalian di dalam `DB::transaction()` dan `lockForUpdate()` (Pessimistic Locking) untuk mencegah *race condition*.
+   - Validasi ketersediaan stok (> 0), penolakan transaksi jika stok habis, serta pencegahan NIM yang sama meminjam buku yang sama yang belum dikembalikan.
+   - Pencatatan otomatis timestamp `tanggal_kembali` saat pengembalian dan penanganan `QueryException` yang dicatat ke `Log::error()`.
 
-> **Catatan:** Pastikan telah menjalankan `php artisan migrate:fresh --seed` sebelum mengakses halaman untuk melihat data uji (*dummy data*) yang sudah terhubung dengan *Eager Loading*.
+3. **Fluent Query Builder & Filter Dinamis:**
+   - Katalog buku menggunakan `withCount('peminjamans')`, filter pencarian dinamis `when()` (judul, penulis, ISBN, kategori), dan paginasi `withQueryString()`.
+   - Ringkasan dashboard dan laporan statistik perpustakaan dihitung menggunakan `DB::table()` (Total Judul, Total Stok, Total Dipinjam, Total Dikembalikan).
+
+4. **Manajemen Sesi Pengguna & Autentikasi Pustakawan:**
+   - `AuthController` menangani proses Login dan Logout menggunakan `Auth::attempt()`.
+   - Penerapan `session()->regenerate()` saat login untuk mencegah *Session Fixation*, serta `Cookie::queue()` untuk menyimpan jejak aktivitas HTTP Cookie.
+   - Proteksi seluruh rute transaksi dan mutasi data menggunakan *middleware* `auth`.
+
+5. **Seeder Uji & Dokumentasi Audit:**
+   - `UserSeeder` untuk menyuntikkan akun Pustakawan uji.
+   - `BukuSeeder` yang menyediakan data sampel buku dengan stok = 0 (uji penolakan), stok = 1 (uji penguncian concurrency), serta sampel riwayat transaksi.
+
+---
+
+## 🌐 Akses Halaman Web (Routes Terproteksi)
+Setelah menjalankan `php artisan serve`, rute sistem dapat diakses melalui peramban:
+
+- **Halaman Login Pustakawan:** `http://127.0.0.1:8000/login`
+- **Katalog Buku:** `http://127.0.0.1:8000/buku` *(Memerlukan Auth)*
+- **Kategori Buku:** `http://127.0.0.1:8000/kategori` *(Memerlukan Auth)*
+- **Sirkulasi Peminjaman:** `http://127.0.0.1:8000/peminjamans` *(Memerlukan Auth)*
+- **Laporan Statistik:** `http://127.0.0.1:8000/laporan` *(Memerlukan Auth)*
+
+---
+
+## 📷 Bukti Pengujian & Audit DevTools
+
+### 1. Bukti Transaksi Peminjaman Buku Berhasil
+![Bukti Peminjaman Buku](docs/peminjaman.png)
+
+### 2. Bukti Penolakan Transaksi (Stok Buku = 0)
+![Bukti Penolakan Stok 0](docs/penolakan_stok_0.png)
+
+### 3. Bukti Pengembalian Buku & Pembaruan Stok
+![Bukti Pengembalian Buku](docs/pengembalian.png)
+
+### 4. Audit Cookie HttpOnly & Session pada Browser DevTools
+![Audit Cookie DevTools](docs/audit_cookie.png)
